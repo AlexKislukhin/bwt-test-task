@@ -10,6 +10,8 @@ import {
 import getWithdrawn from "./getWithdrawn";
 import getPayseraConfig from "../../services/paysera/getPayseraConfig";
 
+export const ceilToCents = (number: number) => Math.ceil(number * 100) / 100;
+
 export const handleCashIn = async (
     transaction: Transaction
 ): Promise<number> => {
@@ -42,6 +44,8 @@ export const handleCashOut = async (
         if (amount + withdrawn - limit > 0) {
             return ((amount - Math.max(0, limit - withdrawn)) * percents) / 100;
         }
+
+        return 0;
     }
 
     if (transaction.user_type === TransactionUserType.juridical) {
@@ -56,12 +60,13 @@ export const handleCashOut = async (
     }
 
     throw new Error(
-        `[handleCashOut] - Couldn't find resolver for user type: ${transaction.user_type}`
+        `[handleCashOut] - Couldn't find resolver for user type: ${transaction.user_type} was expecting ${TransactionUserType.natural}`
     );
 };
 
-// handleTransaction
-export default async (transaction: Transaction): Promise<number> => {
+export const handleTransaction = async (
+    transaction: Transaction
+): Promise<number> => {
     if (transaction.type === TransactionType.cash_in) {
         // eslint-disable-next-line no-await-in-loop
         return handleCashIn(transaction);
@@ -75,4 +80,17 @@ export default async (transaction: Transaction): Promise<number> => {
     throw new Error(
         `[handleTransaction] - Couldn't find resolver for type: ${transaction.type}`
     );
+};
+
+export const handleTransactionList = async (transactionList: Transaction[]) => {
+    const result: number[] = [];
+
+    for (let i = 0; i < transactionList.length; i += 1) {
+        // We need to execute them synchronized to correctly calculate commision
+        // eslint-disable-next-line no-await-in-loop
+        const data = await handleTransaction(transactionList[i]);
+        result.push(ceilToCents(data));
+    }
+
+    return result;
 };

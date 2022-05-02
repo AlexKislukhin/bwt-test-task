@@ -13,7 +13,7 @@ export default (() => {
         getInCurrency: TransactionCurrency
     ) => {
         const key = `${user_id}_${moment(date)
-            .startOf("week")
+            .startOf("isoWeek")
             .isoWeekday(1)
             .get("isoWeek")}`;
 
